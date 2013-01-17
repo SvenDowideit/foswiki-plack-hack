@@ -125,6 +125,10 @@ issues.
 
 =cut
 
+BEGIN {
+$ENV{SCRIPT_NAME} = 'configure';
+};
+
 use strict;
 use warnings;
 
