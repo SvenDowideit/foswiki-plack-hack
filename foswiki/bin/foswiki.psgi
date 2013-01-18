@@ -24,9 +24,7 @@ BEGIN {
 
     $cwd = dirname( realpath(__FILE__) );
     
-    chdir("$cwd/$cfg->{fwdir}/bin");
-
-    require "$cwd/$cfg->{fwdir}/bin/setlib.cfg";
+    require "setlib.cfg";
     die $@ if $@;
    
     $Foswiki::cfg{Engine} = 'Foswiki::Engine::CGI'; #ESSENTIAL - need to tell foswiki than we not running Engine::Legacy.
@@ -78,7 +76,7 @@ my $configure = CGI::Emulate::PSGI->handler(sub {
 
 builder {
     enable "Runtime";
-    enable "Plack::Middleware::Static", path => qr{^/pub/}, root => "$cwd/$cfg->{fwdir}";
+    enable "Plack::Middleware::Static", path => qr{^/pub/}, root => "$cwd/../";
 
     my @actions = qw(view edit save rest oops
                     attach changes compare login logon manage preview rdiff rdiffauth
