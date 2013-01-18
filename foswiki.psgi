@@ -23,9 +23,17 @@ BEGIN {
     ###################################
 
     $cwd = dirname( realpath(__FILE__) );
+    
+    chdir("$cwd/$cfg->{fwdir}/bin");
 
     require "$cwd/$cfg->{fwdir}/bin/setlib.cfg";
+    die $@ if $@;
+   
     $Foswiki::cfg{Engine} = 'Foswiki::Engine::CGI'; #ESSENTIAL - need to tell foswiki than we not running Engine::Legacy.
+    
+$ENV{FOSWIKI_ASSERTS} = 1;
+$ENV{FOSWIKI_MONITOR} = 1;
+    
 }
 
 use Plack::Builder;
@@ -34,7 +42,7 @@ use Plack::App::WrapCGI;
 $ENV{PATH} = $cfg->{env_path};
 
 #configure script: standard (forked) CGI application
-my $configure = Plack::App::WrapCGI->new( script => "$cwd/$cfg->{fwdir}/bin/configure", execute => 1)->to_app;
+#my $configure = Plack::App::WrapCGI->new( script => "$cwd/$cfg->{fwdir}/bin/configure.pl", execute => 1)->to_app;
 
 #foswiki application - PSGI, with emulated CGI environment
 my $foswiki = CGI::Emulate::PSGI->handler(sub {
@@ -50,6 +58,22 @@ my $foswiki = CGI::Emulate::PSGI->handler(sub {
     use Foswiki     ();
     use Foswiki::UI ();
     $Foswiki::engine->run();
+});
+
+#foswiki application - PSGI, with emulated CGI environment
+my $configure = CGI::Emulate::PSGI->handler(sub {
+    use CGI;
+    use CGI::Cookie;
+    use utf8;
+    use Encode;
+    #use uni::perl;
+    CGI::initialize_globals();
+    use CGI::Carp qw(fatalsToBrowser);
+    $SIG{__DIE__} = \&CGI::Carp::confess;
+    
+    use Foswiki::UI::Configure     ();
+    Foswiki::render_configure_ui(new CGI);
+    #run_configure();
 });
 
 builder {
