@@ -39,37 +39,36 @@ use CGI::Emulate::PSGI;
 use Plack::App::WrapCGI;
 $ENV{PATH} = $cfg->{env_path};
 
+#configure script: standard (forked) CGI application
+my $configure = Plack::App::WrapCGI->new( script => "$cwd/configure", execute => 1)->to_app;
 
 #foswiki application - PSGI, with emulated CGI environment
-my $foswiki = CGI::Emulate::PSGI->handler(sub {
-    use CGI;
-    use CGI::Cookie;
-    use utf8;
-    use Encode;
-    #use uni::perl;
-    CGI::initialize_globals();
-    use CGI::Carp qw(fatalsToBrowser);
-    $SIG{__DIE__} = \&CGI::Carp::confess;
+# my $configure = CGI::Emulate::PSGI->handler(sub {
+    # use CGI;
+    # use CGI::Cookie;
+    # use utf8;
+    # use Encode;
+    # #use uni::perl;
+    # CGI::initialize_globals();
+    # use CGI::Carp qw(fatalsToBrowser);
+    # $SIG{__DIE__} = \&CGI::Carp::confess;
+    
+    # use Foswiki::UI::Configure     ();
+    # Foswiki::render_configure_ui(new CGI);
+    # #run_configure();
+# });
 
-    use Foswiki     ();
-    use Foswiki::UI ();
-    $Foswiki::engine->run();
-});
+builder {
+    enable "Runtime";
+
+    mount "/" => builder {
+        enable "Auth::Basic", authenticator => \&authen_cb;
+        enable 'IPAddressFilter', rules => $cfg->{config_hosts};
+        $ENV{AUTH_TYPE} = "BASIC";
+        $configure;
+    };
+};
 sub authen_cb {
     my($username, $password) = @_;
     return $username eq $cfg->{config_user} && $password eq $cfg->{config_pass};
 }
-
-
-builder {
-    enable "Runtime";
-    enable "Plack::Middleware::Static", path => qr{^/pub/}, root => "$cwd/../";
-
-    my @actions = qw(view edit save rest oops
-                    attach changes compare login logon manage preview rdiff rdiffauth
-                    register rename resetpasswd search statistics upload viewauth viewfile);
-    foreach my $act (@actions) {
-        mount "/$act" => $foswiki;
-    }
-    mount '/' => $foswiki;
-};
